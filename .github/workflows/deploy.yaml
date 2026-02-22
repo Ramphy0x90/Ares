@@ -1,0 +1,75 @@
+name: Build & Deploy Ares
+
+on:
+    push:
+        branches: [main]
+
+jobs:
+    build-and-deploy:
+        runs-on: self-hosted
+        environment: Deploy
+        env:
+            KUBECONFIG: /home/r16a-runner/.kube/config
+            NAMESPACE: r16a-ares
+            REGISTRY: registry.r16a.cloud
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Write production environment
+              run: echo "${{ secrets.ANGULAR_ENV_PROD }}" > frontend/src/environments/environment.prod.ts
+
+            - name: Login private registry
+              run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login $REGISTRY -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+            - name: Build and push backend image
+              run: |
+                  docker build \
+                    -t $REGISTRY/ares-backend:${{ github.sha }} \
+                    -t $REGISTRY/ares-backend:latest \
+                    backend/
+                  docker push $REGISTRY/ares-backend:${{ github.sha }}
+                  docker push $REGISTRY/ares-backend:latest
+
+            - name: Build and push frontend image
+              run: |
+                  docker build \
+                    -t $REGISTRY/ares-frontend:${{ github.sha }} \
+                    -t $REGISTRY/ares-frontend:latest \
+                    frontend/
+                  docker push $REGISTRY/ares-frontend:${{ github.sha }}
+                  docker push $REGISTRY/ares-frontend:latest
+
+            - name: Ensure registry pull secret
+              run: |
+                  kubectl create secret docker-registry registry-credentials \
+                    --docker-server=$REGISTRY \
+                    --docker-username="${{ secrets.REGISTRY_USERNAME }}" \
+                    --docker-password="${{ secrets.REGISTRY_PASSWORD }}" \
+                    -n $NAMESPACE \
+                    --dry-run=client -o yaml | kubectl apply -f -
+
+            - name: Apply backend secret
+              run: |
+                  kubectl create secret generic backend-secret \
+                    --from-literal=DATABASE_URL="sqlite+aiosqlite:///./data/ares.db" \
+                    --from-literal=MAX_CONCURRENT_SCANS="5" \
+                    --from-literal=SCAN_TIMEOUT="3600" \
+                    --from-literal=WS_HEARTBEAT_INTERVAL="30" \
+                    --from-literal=OIDC_ISSUER="${{ secrets.OIDC_ISSUER }}" \
+                    --from-literal=OIDC_CLIENT_ID="${{ secrets.OIDC_CLIENT_ID }}" \
+                    -n $NAMESPACE \
+                    --dry-run=client -o yaml | kubectl apply -f -
+
+            - name: Update deployment images
+              run: |
+                  sed -i "s|image: $REGISTRY/ares-backend:.*|image: $REGISTRY/ares-backend:${{ github.sha }}|" k8s/backend-deployment.yaml
+                  sed -i "s|image: $REGISTRY/ares-frontend:.*|image: $REGISTRY/ares-frontend:${{ github.sha }}|" k8s/frontend-deployment.yaml
+
+            - name: Apply Kubernetes manifests
+              run: kubectl apply -k k8s/
+
+            - name: Wait for rollout
+              run: |
+                  kubectl rollout status deployment/backend -n $NAMESPACE --timeout=120s
+                  kubectl rollout status deployment/frontend -n $NAMESPACE --timeout=120s
