@@ -17,7 +17,9 @@ jobs:
             - uses: actions/checkout@v4
 
             - name: Write production environment
-              run: echo "${{ secrets.ANGULAR_ENV_PROD }}" > frontend/src/environments/environment.prod.ts
+              run: printenv ANGULAR_ENV_PROD > frontend/src/environments/environment.prod.ts
+              env:
+                  ANGULAR_ENV_PROD: ${{ secrets.ANGULAR_ENV_PROD }}
 
             - name: Login private registry
               run: echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login $REGISTRY -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
