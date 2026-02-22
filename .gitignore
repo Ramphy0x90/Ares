@@ -20,6 +20,7 @@ frontend/.angular/
 
 # Environment
 .env
+frontend/src/environments/environment.prod.ts
 backend/data/ares.db
 backend/data/reports/
 
