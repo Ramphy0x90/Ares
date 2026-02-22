@@ -7,7 +7,7 @@ on:
 jobs:
     build-and-deploy:
         runs-on: self-hosted
-        environment: Deploy
+        environment: Prod
         env:
             KUBECONFIG: /home/r16a-runner/.kube/config
             NAMESPACE: r16a-ares
