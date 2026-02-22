@@ -4,7 +4,6 @@ kind: Kustomization
 namespace: r16a-ares
 
 resources:
-  - namespace.yaml
   - pvc.yaml
   - backend-deployment.yaml
   - backend-service.yaml
