@@ -11,6 +11,7 @@ export const routes: Routes = [
   { path: 'scans', loadComponent: () => import('./pages/scans/scan-list.component').then(m => m.ScanListComponent), canActivate: [authGuard] },
   { path: 'scans/launch', loadComponent: () => import('./pages/scans/scan-launch.component').then(m => m.ScanLaunchComponent), canActivate: [authGuard] },
   { path: 'scans/:id', loadComponent: () => import('./pages/scans/scan-detail.component').then(m => m.ScanDetailComponent), canActivate: [authGuard] },
+  { path: 'scans/:scan_id/vulnerabilities', loadComponent: () => import('./pages/vulnerabilities/vuln-list.component').then(m => m.VulnListComponent), canActivate: [authGuard] },
   { path: 'vulnerabilities', loadComponent: () => import('./pages/vulnerabilities/vuln-list.component').then(m => m.VulnListComponent), canActivate: [authGuard] },
   { path: 'vulnerabilities/:id', loadComponent: () => import('./pages/vulnerabilities/vuln-detail.component').then(m => m.VulnDetailComponent), canActivate: [authGuard] },
   { path: 'reports', loadComponent: () => import('./pages/reports/report-list.component').then(m => m.ReportListComponent), canActivate: [authGuard] },

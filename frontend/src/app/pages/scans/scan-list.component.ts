@@ -61,6 +61,14 @@ import { TimeAgoPipe } from '../../shared/pipes/time-ago.pipe';
           <th mat-header-cell *matHeaderCellDef>Started</th>
           <td mat-cell *matCellDef="let s">{{ s.created_at | timeAgo }}</td>
         </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let s">
+            <button mat-icon-button color="warn" (click)="deleteScan(s, $event)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
         <tr mat-header-row *matHeaderRowDef="columns"></tr>
         <tr mat-row *matRowDef="let row; columns: columns;"></tr>
       </table>
@@ -70,7 +78,7 @@ import { TimeAgoPipe } from '../../shared/pipes/time-ago.pipe';
 })
 export class ScanListComponent implements OnInit {
   scans: Scan[] = [];
-  columns = ['id', 'target', 'status', 'progress', 'created'];
+  columns = ['id', 'target', 'status', 'progress', 'created', 'actions'];
   statusFilter = '';
 
   constructor(private scanService: ScanService) {}
@@ -79,5 +87,12 @@ export class ScanListComponent implements OnInit {
 
   load(): void {
     this.scanService.getScans({ status: this.statusFilter }).subscribe(s => this.scans = s);
+  }
+
+  deleteScan(scan: Scan, event: Event): void {
+    event.stopPropagation();
+    if (confirm(`Delete Scan #${scan.id}? This will also delete all its findings.`)) {
+      this.scanService.deleteScan(scan.id).subscribe(() => this.load());
+    }
   }
 }

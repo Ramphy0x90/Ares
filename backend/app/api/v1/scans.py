@@ -58,6 +58,17 @@ async def stop_scan(scan_id: int, db: AsyncSession = Depends(get_db)):
     return scan
 
 
+@router.delete("/{scan_id}", status_code=204)
+async def delete_scan(scan_id: int, db: AsyncSession = Depends(get_db)):
+    scan = await db.get(Scan, scan_id)
+    if not scan:
+        raise HTTPException(404, "Scan not found")
+    if scan.status == "running":
+        await scan_service.stop_scan(scan_id)
+    await db.delete(scan)
+    await db.commit()
+
+
 @router.get("/{scan_id}/vulnerabilities", response_model=list[VulnerabilityResponse])
 async def get_scan_vulnerabilities(scan_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Vulnerability).where(Vulnerability.scan_id == scan_id))

@@ -24,6 +24,10 @@ export class ScanService {
     return this.api.post<Scan>(`/scans/${id}/stop`, {});
   }
 
+  deleteScan(id: number): Observable<void> {
+    return this.api.delete(`/scans/${id}`);
+  }
+
   getScanVulnerabilities(id: number): Observable<Vulnerability[]> {
     return this.api.get<Vulnerability[]>(`/scans/${id}/vulnerabilities`);
   }

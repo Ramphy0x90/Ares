@@ -10,8 +10,10 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[VulnerabilityResponse])
-async def list_vulnerabilities(severity: str | None = None, status: str | None = None, scanner: str | None = None, db: AsyncSession = Depends(get_db)):
+async def list_vulnerabilities(severity: str | None = None, status: str | None = None, scanner: str | None = None, scan_id: int | None = None, db: AsyncSession = Depends(get_db)):
     stmt = select(Vulnerability)
+    if scan_id:
+        stmt = stmt.where(Vulnerability.scan_id == scan_id)
     if severity:
         stmt = stmt.where(Vulnerability.severity == severity)
     if status:

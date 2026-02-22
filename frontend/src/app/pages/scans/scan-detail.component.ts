@@ -6,6 +6,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Subscription } from 'rxjs';
+import { Router } from '@angular/router';
 import { ScanService } from '../../core/services/scan.service';
 import { WebSocketService, ScanEvent } from '../../core/services/websocket.service';
 import { Scan } from '../../core/models/scan.model';
@@ -22,11 +23,19 @@ import { SeverityBadgeComponent } from '../../shared/components/severity-badge.c
       @if (scan) {
         <div class="page-header">
           <h1>Scan #{{ scan.id }}</h1>
-          @if (scan.status === 'running') {
-            <button mat-flat-button color="warn" (click)="stop()">
-              <mat-icon>stop</mat-icon> Stop Scan
+          <div style="display: flex; gap: 8px;">
+            <a mat-flat-button [routerLink]="['/scans', scan.id, 'vulnerabilities']">
+              <mat-icon>bug_report</mat-icon> All Vulnerabilities
+            </a>
+            @if (scan.status === 'running') {
+              <button mat-flat-button color="warn" (click)="stop()">
+                <mat-icon>stop</mat-icon> Stop Scan
+              </button>
+            }
+            <button mat-flat-button color="warn" (click)="deleteScan()">
+              <mat-icon>delete</mat-icon> Delete
             </button>
-          }
+          </div>
         </div>
 
         <div class="card-grid">
@@ -101,7 +110,7 @@ export class ScanDetailComponent implements OnInit, OnDestroy {
   vulnColumns = ['severity', 'title', 'scanner', 'cvss'];
   private wsSub?: Subscription;
 
-  constructor(private scanService: ScanService, private wsService: WebSocketService) {}
+  constructor(private scanService: ScanService, private wsService: WebSocketService, private router: Router) {}
 
   ngOnInit(): void {
     const scanId = Number(this.id);
@@ -111,7 +120,10 @@ export class ScanDetailComponent implements OnInit, OnDestroy {
         this.wsSub = this.wsService.connect(scanId).subscribe(evt => {
           this.events.push(evt);
           if (evt.progress !== undefined && this.scan) this.scan.progress = evt.progress;
-          if (evt.type === 'scan_complete' && this.scan) this.scan.status = 'completed';
+          if (evt.type === 'finding') {
+            this.scanService.getScanVulnerabilities(scanId).subscribe(v => this.vulns = v);
+          }
+          if (evt.type === 'scan_complete' && this.scan) { this.scan.status = 'completed'; this.scan.progress = 1.0; }
         });
       }
     });
@@ -121,6 +133,12 @@ export class ScanDetailComponent implements OnInit, OnDestroy {
   stop(): void {
     if (this.scan) {
       this.scanService.stopScan(this.scan.id).subscribe(s => this.scan = s);
+    }
+  }
+
+  deleteScan(): void {
+    if (this.scan && confirm(`Delete Scan #${this.scan.id}? This will also delete all its findings.`)) {
+      this.scanService.deleteScan(this.scan.id).subscribe(() => this.router.navigate(['/scans']));
     }
   }
 
